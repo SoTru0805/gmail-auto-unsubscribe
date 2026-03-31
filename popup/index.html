@@ -1,84 +1,343 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gmail Auto-Unsubscribe</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              indigo: {
-                50: '#eef2ff',
-                100: '#e0e7ff',
-                200: '#c7d2fe',
-                400: '#818cf8',
-                500: '#6366f1',
-                600: '#4f46e5',
-                700: '#4338ca',
-              }
-            },
-            fontFamily: {
-              sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
-              mono: ['"DM Mono"', 'monospace'],
-            }
-          }
-        }
-      }
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-      body {
-        width: 600px;
-        height: 500px;
-        overflow: hidden;
-        font-family: 'DM Sans', system-ui, sans-serif;
-      }
-      #root {
-        width: 100%;
-        height: 100%;
-      }
-      ::-webkit-scrollbar {
-        width: 4px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #f1f5f9;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 2px;
-      }
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-      @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(4px); }
-        to   { opacity: 1; transform: translateY(0); }
-      }
-      .animate-spin { animation: spin 0.8s linear infinite; }
-      .animate-fade-in { animation: fadeIn 0.2s ease-out both; }
-      .tab-active {
-        color: #6366f1;
-        border-bottom: 2px solid #6366f1;
-      }
-      .tab-inactive {
-        color: #64748b;
-        border-bottom: 2px solid transparent;
-      }
-      .tab-inactive:hover { color: #334155; }
-      .row-hover:hover { background: #f8fafc; }
-    </style>
-  </head>
-  <body class="bg-white">
-    <div id="root"></div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gmail Auto-Unsubscribe</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    <!-- React + ReactDOM via CDN -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- Babel for JSX in popup -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script type="text/babel" src="App.jsx"></script>
-  </body>
+    body {
+      width: 600px;
+      height: 500px;
+      overflow: hidden;
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #fff;
+      color: #1e293b;
+      font-size: 13px;
+    }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+
+    /* ── Layout ── */
+    #app { display: flex; flex-direction: column; height: 500px; }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .logo {
+      width: 28px; height: 28px;
+      background: #6366f1;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: white; flex-shrink: 0;
+    }
+    .app-title { font-size: 13px; font-weight: 700; color: #1e293b; line-height: 1.2; }
+    .app-subtitle { font-size: 10px; color: #94a3b8; margin-top: 1px; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+
+    /* Toggle */
+    .toggle-wrap { display: flex; align-items: center; gap: 6px; }
+    .toggle-label { font-size: 11px; color: #64748b; font-weight: 500; }
+    .toggle {
+      position: relative; width: 36px; height: 20px;
+      background: #cbd5e1; border-radius: 10px; cursor: pointer;
+      transition: background 0.2s; border: none; outline: none;
+      flex-shrink: 0;
+    }
+    .toggle.on { background: #6366f1; }
+    .toggle::after {
+      content: '';
+      position: absolute; top: 2px; left: 2px;
+      width: 16px; height: 16px;
+      background: white; border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle.on::after { transform: translateX(16px); }
+
+    /* Scan button */
+    .btn-scan {
+      display: flex; align-items: center; gap: 5px;
+      padding: 6px 12px; border-radius: 8px;
+      background: #6366f1; color: white;
+      font-size: 11px; font-weight: 600;
+      border: none; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-scan:hover { background: #4f46e5; }
+    .btn-scan:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-scan svg { flex-shrink: 0; }
+
+    /* ── Auth Banner ── */
+    .auth-banner {
+      margin: 10px 16px 0;
+      padding: 8px 12px;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      font-size: 11px;
+      color: #92400e;
+      display: none;
+    }
+    .auth-banner.show { display: block; }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #f1f5f9;
+      padding: 0 16px;
+    }
+    .tab-btn {
+      display: flex; align-items: center; gap: 5px;
+      padding: 10px 8px; margin-right: 8px;
+      font-size: 11px; font-weight: 600;
+      border: none; background: none; cursor: pointer;
+      color: #64748b;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: #334155; }
+    .tab-btn.active { color: #6366f1; border-bottom-color: #6366f1; }
+    .tab-badge {
+      font-size: 10px; font-weight: 700;
+      padding: 1px 5px; border-radius: 10px;
+      background: #f1f5f9; color: #64748b;
+    }
+    .tab-btn.active .tab-badge { background: #eef2ff; color: #6366f1; }
+
+    /* ── Tab Panels ── */
+    .tab-panel { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+    .tab-panel.active { display: flex; }
+
+    /* ── List Header ── */
+    .list-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px;
+      background: #f8fafc;
+      border-bottom: 1px solid #f1f5f9;
+      flex-shrink: 0;
+    }
+    .list-meta { font-size: 11px; color: #94a3b8; font-weight: 500; }
+    .btn-unsub-all {
+      padding: 5px 10px; border-radius: 6px;
+      background: #6366f1; color: white;
+      font-size: 11px; font-weight: 600;
+      border: none; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-unsub-all:hover { background: #4f46e5; }
+
+    /* ── Sender List ── */
+    .sender-list { flex: 1; overflow-y: auto; }
+    .sender-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px;
+      border-bottom: 1px solid #f8fafc;
+      transition: background 0.1s;
+    }
+    .sender-row:hover { background: #f8fafc; }
+
+    /* Avatar */
+    .avatar {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; flex-shrink: 0;
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* Sender info */
+    .sender-info { flex: 1; min-width: 0; }
+    .sender-name {
+      font-size: 12px; font-weight: 600; color: #1e293b;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .sender-email {
+      font-size: 10px; color: #94a3b8;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      font-family: 'DM Mono', monospace; margin-top: 1px;
+    }
+    .sender-meta { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+    .sender-meta span { margin-right: 8px; }
+
+    /* Badge */
+    .badge {
+      font-size: 10px; font-weight: 600;
+      padding: 1px 6px; border-radius: 10px;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .badge-auto { background: #eef2ff; color: #6366f1; }
+    .badge-unsubscribed { background: #dcfce7; color: #15803d; }
+    .badge-blocked { background: #fee2e2; color: #b91c1c; }
+
+    /* Action buttons */
+    .actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .btn-action {
+      display: flex; align-items: center; gap: 3px;
+      padding: 4px 8px; border-radius: 6px;
+      font-size: 10px; font-weight: 600;
+      border: 1px solid; cursor: pointer;
+      transition: background 0.12s, color 0.12s;
+      background: transparent;
+      white-space: nowrap;
+    }
+    .btn-unsub  { border-color: #c7d2fe; color: #6366f1; }
+    .btn-unsub:hover  { background: #eef2ff; }
+    .btn-unsub:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-keep   { border-color: #e2e8f0; color: #64748b; }
+    .btn-keep:hover   { background: #f8fafc; }
+    .btn-block  { border-color: #fee2e2; color: #ef4444; }
+    .btn-block:hover  { background: #fff1f1; }
+    .btn-undo   { border-color: #e2e8f0; color: #64748b; }
+    .btn-undo:hover   { background: #f8fafc; }
+
+    /* ── Empty State ── */
+    .empty-state {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 40px 24px; text-align: center;
+    }
+    .empty-icon { font-size: 36px; margin-bottom: 10px; }
+    .empty-title { font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 4px; }
+    .empty-body { font-size: 11px; color: #94a3b8; max-width: 260px; line-height: 1.5; }
+
+    /* ── Loading ── */
+    .loading-wrap {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid #e0e7ff;
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 16px; left: 50%;
+      transform: translateX(-50%) translateY(60px);
+      padding: 8px 16px; border-radius: 8px;
+      font-size: 11px; font-weight: 600; color: white;
+      z-index: 9999; pointer-events: none;
+      transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+      white-space: nowrap;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { background: #10b981; }
+    .toast.error   { background: #ef4444; }
+    .toast.info    { background: #475569; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in { animation: fadeIn 0.2s ease-out both; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="20" height="16" rx="2"/>
+          <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+        </svg>
+      </div>
+      <div>
+        <div class="app-title">Auto-Unsubscribe</div>
+        <div class="app-subtitle" id="last-scanned">Not yet scanned</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="toggle-wrap">
+        <span class="toggle-label">Auto</span>
+        <button class="toggle" id="auto-toggle" title="Toggle auto-unsubscribe"></button>
+      </div>
+      <button class="btn-scan" id="scan-btn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+          <path d="M21 3v5h-5"/>
+          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+          <path d="M8 16H3v5"/>
+        </svg>
+        Scan Now
+      </button>
+    </div>
+  </div>
+
+  <!-- Auth Banner -->
+  <div class="auth-banner" id="auth-banner">
+    ⚠️ Sign-in required. Click Scan Now to authenticate with Google.
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="review">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+        <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+      </svg>
+      Review Queue
+      <span class="tab-badge" id="badge-review">0</span>
+    </button>
+    <button class="tab-btn" data-tab="unsubscribed">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+      </svg>
+      Auto-Unsubscribed
+      <span class="tab-badge" id="badge-unsubscribed">0</span>
+    </button>
+    <button class="tab-btn" data-tab="blocked">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      Blocked
+      <span class="tab-badge" id="badge-blocked">0</span>
+    </button>
+  </div>
+
+  <!-- Tab: Review Queue -->
+  <div class="tab-panel active" id="panel-review">
+    <div id="review-content" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+      <div class="loading-wrap"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- Tab: Unsubscribed -->
+  <div class="tab-panel" id="panel-unsubscribed">
+    <div id="unsubscribed-content" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+      <div class="loading-wrap"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- Tab: Blocked -->
+  <div class="tab-panel" id="panel-blocked">
+    <div id="blocked-content" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+      <div class="loading-wrap"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="popup.js"></script>
+</body>
 </html>
