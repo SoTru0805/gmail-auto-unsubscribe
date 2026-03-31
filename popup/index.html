@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gmail Auto-Unsubscribe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              indigo: {
+                50: '#eef2ff',
+                100: '#e0e7ff',
+                200: '#c7d2fe',
+                400: '#818cf8',
+                500: '#6366f1',
+                600: '#4f46e5',
+                700: '#4338ca',
+              }
+            },
+            fontFamily: {
+              sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
+              mono: ['"DM Mono"', 'monospace'],
+            }
+          }
+        }
+      }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+      body {
+        width: 600px;
+        height: 500px;
+        overflow: hidden;
+        font-family: 'DM Sans', system-ui, sans-serif;
+      }
+      #root {
+        width: 100%;
+        height: 100%;
+      }
+      ::-webkit-scrollbar {
+        width: 4px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f5f9;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 2px;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(4px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      .animate-spin { animation: spin 0.8s linear infinite; }
+      .animate-fade-in { animation: fadeIn 0.2s ease-out both; }
+      .tab-active {
+        color: #6366f1;
+        border-bottom: 2px solid #6366f1;
+      }
+      .tab-inactive {
+        color: #64748b;
+        border-bottom: 2px solid transparent;
+      }
+      .tab-inactive:hover { color: #334155; }
+      .row-hover:hover { background: #f8fafc; }
+    </style>
+  </head>
+  <body class="bg-white">
+    <div id="root"></div>
+
+    <!-- React + ReactDOM via CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel for JSX in popup -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script type="text/babel" src="App.jsx"></script>
+  </body>
+</html>
